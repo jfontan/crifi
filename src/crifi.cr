@@ -12,9 +12,7 @@ module Crifi
       @paths.push @path
 
       while true
-        if @paths.size == 0
-          break
-        end
+        break if @paths.size == 0
 
         p = @paths.pop
         dirs = process(p)
@@ -24,38 +22,36 @@ module Crifi
 
     def process(path : String) : Array(String)
       begin
-        dir = DirReader.new(path)
+        dir = Crystal::System::Dir.open(path)
       rescue
         puts "Error: " + path
         return Array(String).new
       end
 
       dirs = Array(String).new
-      files = Array(String).new
-      base = Path.new(path)
+      files = String::Builder.new(4096)
+      base = "#{path}/"
 
-      dir.each do |e|
-        if e.name == "." || e.name == ".."
-          next
+      while true
+        begin
+          e = Crystal::System::Dir.next_entry(dir, path)
+        rescue
+          puts "Error: " + path
         end
 
-        fp = base.join(e.name).to_s
-        files << fp
+        break if !e
+        next if e.name == "." || e.name == ".."
 
-        if e.dir? == nil || e.dir? == false
-          next
-        end
+        fp = "#{base}#{e.name}"
+        files << fp << "\n"
 
+        next if !e.dir?
         dirs << fp
-      rescue
-        if fp
-          puts "Error: " + fp
-        end
       end
 
-      puts files.join("\n")
+      print files.to_s
 
-      dir.close
+      Crystal::System::Dir.close(dir, path)
       return dirs
     end
   end
@@ -66,6 +62,7 @@ module Crifi
       @path = path
     end
 
+    @[AlwaysInline]
     def each(&block)
       while true
         ent = Crystal::System::Dir.next_entry(@dir, @path)
@@ -80,5 +77,5 @@ module Crifi
   end
 end
 
-f = Crifi::Find.new("/home/jfontan")
+f = Crifi::Find.new("/")
 f.find
