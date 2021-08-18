@@ -26,7 +26,7 @@ module Crifi
       work = Channel(String).new
       dirs = Channel(Array(String)).new
 
-      NestedScheduler::ThreadPool.nursery(thread_count: 8) do |pool|
+      NestedScheduler::ThreadPool.nursery(thread_count: 5) do |pool|
         4.times do
           pool.spawn do
             while path = work.receive?
