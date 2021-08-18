@@ -1,4 +1,5 @@
-# TODO: Write documentation for `Crifi`
+require "nested_scheduler"
+
 module Crifi
   VERSION = "0.1.0"
 
@@ -25,48 +26,52 @@ module Crifi
       work = Channel(String).new
       dirs = Channel(Array(String)).new
 
-      4.times do
-        spawn do
-          while path = work.receive?
-            break if !path
-            d = process(path, @re)
-            dirs.send(d)
-          end
-        end
-      end
-
-      path = @path
-      value = true
-      active = 0
-      loop do
-        if value
-          select
-          when work.send(path)
-            active += 1
-            if @paths.size > 0
-              path = @paths.pop
-              value = true
-            else
-              value = false
+      NestedScheduler::ThreadPool.nursery(thread_count: 8) do |pool|
+        4.times do
+          pool.spawn do
+            while path = work.receive?
+              break if !path
+              d = process(path, @re)
+              dirs.send(d)
             end
-          when d = dirs.receive
-            active -= 1
-            d.each { |p| @paths.push(p) }
-          end
-        else
-          break if active <= 0
-
-          d = dirs.receive
-          active -= 1
-          d.each { |p| @paths.push(p) }
-
-          if @paths.size > 0
-            path = @paths.pop
-            value = true
           end
         end
+
+        pool.spawn do
+          path = @path
+          value = true
+          active = 0
+          loop do
+            if value
+              select
+              when work.send(path)
+                active += 1
+                if @paths.size > 0
+                  path = @paths.pop
+                  value = true
+                else
+                  value = false
+                end
+              when d = dirs.receive
+                active -= 1
+                d.each { |p| @paths.push(p) }
+              end
+            else
+              break if active <= 0
+
+              d = dirs.receive
+              active -= 1
+              d.each { |p| @paths.push(p) }
+
+              if @paths.size > 0
+                path = @paths.pop
+                value = true
+              end
+            end
+          end
+          work.close
+        end
       end
-      work.close
     end
 
     def process(path : String, re : Regex) : Array(String)

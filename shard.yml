@@ -11,3 +11,7 @@ targets:
 crystal: 1.1.1
 
 license: MIT
+
+dependencies:
+  nested_scheduler:
+    github: yxhuvud/nested_scheduler
