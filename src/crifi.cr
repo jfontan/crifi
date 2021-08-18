@@ -23,39 +23,40 @@ module Crifi
     end
 
     def process(path : String) : Array(String)
-      if File.symlink?(path)
+      begin
+        dir = DirReader.new(path)
+      rescue
+        puts "Error: " + path
         return Array(String).new
       end
+
       dirs = Array(String).new
       files = Array(String).new
       base = Path.new(path)
 
-      Dir.each(path) do |f|
-        if f == "." || f == ".."
+      dir.each do |e|
+        if e.name == "." || e.name == ".."
           next
         end
 
-        fp = base.join(f).to_s
+        fp = base.join(e.name).to_s
         files << fp
 
-        begin
-          info = File.info(fp)
-        rescue
-          puts "Error: " + fp
+        if e.dir? == nil || e.dir? == false
           next
         end
 
-        if info.directory?
-          dirs << fp
+        dirs << fp
+      rescue
+        if fp
+          puts "Error: " + fp
         end
       end
 
       puts files.join("\n")
 
+      dir.close
       return dirs
-    rescue
-      puts "Error: " + path
-      return Array(String).new
     end
   end
 
@@ -81,7 +82,3 @@ end
 
 f = Crifi::Find.new("/home/jfontan")
 f.find
-
-r = Crifi::DirReader.new(".")
-r.each { |e| puts e.name, e.dir? }
-r.close
