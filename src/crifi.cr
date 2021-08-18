@@ -3,9 +3,10 @@ module Crifi
   VERSION = "0.1.0"
 
   class Find
-    def initialize(path : String)
+    def initialize(path : String, search : String)
       @path = path
       @paths = Array(String).new
+      @re = Regex.new(search)
     end
 
     def find
@@ -15,7 +16,7 @@ module Crifi
         break if @paths.size == 0
 
         p = @paths.pop
-        dirs = process(p)
+        dirs = process(p, @re)
         dirs.each { |d| @paths.push(d) }
       end
     end
@@ -28,7 +29,7 @@ module Crifi
         spawn do
           while path = work.receive?
             break if !path
-            d = process(path)
+            d = process(path, @re)
             dirs.send(d)
           end
         end
@@ -68,7 +69,7 @@ module Crifi
       work.close
     end
 
-    def process(path : String) : Array(String)
+    def process(path : String, re : Regex) : Array(String)
       begin
         dir = Crystal::System::Dir.open(path)
       rescue
@@ -94,7 +95,7 @@ module Crifi
         next if e.name == "." || e.name == ".."
 
         fp = "#{base}#{e.name}"
-        files << fp << "\n"
+        files << fp << "\n" if re.match(fp)
 
         next if !e.dir?
         dirs << fp
@@ -128,5 +129,5 @@ module Crifi
   end
 end
 
-f = Crifi::Find.new("/")
+f = Crifi::Find.new("/", "")
 f.find_parallel
