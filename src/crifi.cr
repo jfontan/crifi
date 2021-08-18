@@ -20,6 +20,54 @@ module Crifi
       end
     end
 
+    def find_parallel
+      work = Channel(String).new
+      dirs = Channel(Array(String)).new
+
+      4.times do
+        spawn do
+          while path = work.receive?
+            break if !path
+            d = process(path)
+            dirs.send(d)
+          end
+        end
+      end
+
+      path = @path
+      value = true
+      active = 0
+      loop do
+        if value
+          select
+          when work.send(path)
+            active += 1
+            if @paths.size > 0
+              path = @paths.pop
+              value = true
+            else
+              value = false
+            end
+          when d = dirs.receive
+            active -= 1
+            d.each { |p| @paths.push(p) }
+          end
+        else
+          break if active <= 0
+
+          d = dirs.receive
+          active -= 1
+          d.each { |p| @paths.push(p) }
+
+          if @paths.size > 0
+            path = @paths.pop
+            value = true
+          end
+        end
+      end
+      work.close
+    end
+
     def process(path : String) : Array(String)
       begin
         dir = Crystal::System::Dir.open(path)
@@ -31,6 +79,9 @@ module Crifi
       dirs = Array(String).new
       files = String::Builder.new(4096)
       base = "#{path}/"
+      if path == "/"
+        base = "/"
+      end
 
       while true
         begin
@@ -78,4 +129,4 @@ module Crifi
 end
 
 f = Crifi::Find.new("/")
-f.find
+f.find_parallel
