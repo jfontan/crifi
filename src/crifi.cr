@@ -13,7 +13,7 @@ module Crifi
     def find
       @paths.push @path
 
-      while true
+      loop do
         break if @paths.size == 0
 
         p = @paths.pop
@@ -91,7 +91,7 @@ module Crifi
         base = "/"
       end
 
-      while true
+      loop do
         begin
           e = Crystal::System::Dir.next_entry(dir, path)
         rescue
@@ -111,7 +111,7 @@ module Crifi
       print files.to_s
 
       Crystal::System::Dir.close(dir, path)
-      return dirs
+      dirs
     end
   end
 
@@ -123,7 +123,7 @@ module Crifi
 
     @[AlwaysInline]
     def each(&block)
-      while true
+      loop do
         ent = Crystal::System::Dir.next_entry(@dir, @path)
         break if !ent
         yield ent
