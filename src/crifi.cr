@@ -114,26 +114,6 @@ module Crifi
       dirs
     end
   end
-
-  class DirReader
-    def initialize(path : String)
-      @dir = Crystal::System::Dir.open(path)
-      @path = path
-    end
-
-    @[AlwaysInline]
-    def each(&block)
-      loop do
-        ent = Crystal::System::Dir.next_entry(@dir, @path)
-        break if !ent
-        yield ent
-      end
-    end
-
-    def close
-      Crystal::System::Dir.close(@dir, @path)
-    end
-  end
 end
 
 f = Crifi::Find.new("/", "")
