@@ -1,0 +1,14 @@
+version: 2.0
+shards:
+  ameba:
+    git: https://github.com/crystal-ameba/ameba.git
+    version: 0.13.4
+
+  ior:
+    git: https://github.com/yxhuvud/ior.git
+    version: 0.7.1+git.commit.a3c7270ffe2cdc42dc939b2a8b4109976277f5fa
+
+  nested_scheduler:
+    git: https://github.com/yxhuvud/nested_scheduler.git
+    version: 0.2.1+git.commit.75693086c48a4204f7a038c055e2cf220e55b97f
+
