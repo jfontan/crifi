@@ -56,14 +56,14 @@ module Crifi
                 end
               when d = dirs.receive
                 active -= 1
-                d.each { |p| @paths.push(p) }
+                @paths.concat(d)
               end
             else
               break if active <= 0
 
               d = dirs.receive
               active -= 1
-              d.each { |p| @paths.push(p) }
+              @paths.concat(d)
 
               if @paths.size > 0
                 path = @paths.pop
