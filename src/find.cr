@@ -3,11 +3,25 @@ require "nested_scheduler"
 module ParallelFind
   VERSION = "0.1.0"
 
+  struct Result
+    property dirs, files
+
+    def initialize(@dirs : Array(String), @files : Array(String))
+    end
+  end
+
   class Find
-    def initialize(path : String, search : String)
+    def initialize(
+      path : String,
+      search : String,
+      list : Bool = true,
+      print : Bool = false
+    )
       @path = path
       @paths = Array(String).new
       @re = Regex.new(search)
+      @list = list
+      @print = print
     end
 
     def find
@@ -22,9 +36,10 @@ module ParallelFind
       end
     end
 
-    def find_parallel
+    def find_parallel : Array(String)
       work = Channel(String).new
-      dirs = Channel(Array(String)).new
+      results = Channel(Result | Nil).new
+      files = Array(String).new
 
       nprocs = System.cpu_count
 
@@ -33,8 +48,8 @@ module ParallelFind
           pool.spawn do
             while path = work.receive?
               break if !path
-              d = process(path, @re)
-              dirs.send(d)
+              r = process(path, @re)
+              results.send(r)
             end
           end
         end
@@ -54,16 +69,22 @@ module ParallelFind
                 else
                   value = false
                 end
-              when d = dirs.receive
+              when r = results.receive
                 active -= 1
-                @paths.concat(d)
+                if r
+                  @paths.concat(r.dirs) if r.dirs
+                  files.concat(r.files) if r.files
+                end
               end
             else
               break if active <= 0
 
-              d = dirs.receive
+              r = results.receive
               active -= 1
-              @paths.concat(d)
+              if r
+                @paths.concat(r.dirs) if r.dirs
+                files.concat(r.files) if r.files
+              end
 
               if @paths.size > 0
                 path = @paths.pop
@@ -73,19 +94,21 @@ module ParallelFind
           end
           work.close
         end
+        files
       end
     end
 
-    def process(path : String, re : Regex) : Array(String)
+    def process(path : String, re : Regex) : Result | Nil
       begin
         dir = Crystal::System::Dir.open(path)
       rescue
         puts "Error: " + path
-        return Array(String).new
+        return nil
       end
 
       dirs = Array(String).new
-      files = String::Builder.new(4096)
+      files = Array(String).new
+      show = String::Builder.new(4096) if @print
       base = "#{path}/"
       if path == "/"
         base = "/"
@@ -102,16 +125,17 @@ module ParallelFind
         next if e.name == "." || e.name == ".."
 
         fp = "#{base}#{e.name}"
-        files << fp << "\n" if re.match(fp)
+        show << fp << "\n" if re.match(fp) if show
+        files << fp if @list
 
         next if !e.dir?
         dirs << fp
       end
 
-      print files.to_s
+      print show.to_s if show
 
       Crystal::System::Dir.close(dir, path)
-      dirs
+      return Result.new(dirs, files)
     end
   end
 end

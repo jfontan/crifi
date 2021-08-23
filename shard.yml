@@ -19,3 +19,6 @@ dependencies:
   ameba:
     github: crystal-ameba/ameba
     version: ~> 0.13.0
+
+crystalline:
+  main: .crystalline_main.cr
