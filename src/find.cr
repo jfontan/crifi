@@ -125,8 +125,10 @@ module ParallelFind
         next if e.name == "." || e.name == ".."
 
         fp = "#{base}#{e.name}"
-        show << fp << "\n" if re.match(fp) if show
-        files << fp if @list
+        if re.match(fp)
+          show << fp << "\n" if show
+          files << fp if @list
+        end
 
         next if !e.dir?
         dirs << fp
