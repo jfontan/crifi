@@ -6,10 +6,18 @@ describe ParallelFind do
     Generator.generate(10, 10, 10, 10, 1)
   end
 
-  it "finds all files" do
+  it "finds all files sequential" do
     t = Generator.path
     f = ParallelFind::Find.new(t, "", print: false)
-    files = f.find_parallel
+    files = f.find
+    files.sort!
+    files.should eq(Generator.files)
+  end
+
+  it "finds all files parallel" do
+    t = Generator.path
+    f = ParallelFind::Find.new(t, "", print: false)
+    files = f.find(4)
     files.sort!
     files.should eq(Generator.files)
   end
@@ -17,7 +25,7 @@ describe ParallelFind do
   it "finds pattern" do
     t = Generator.path
     f = ParallelFind::Find.new(t, "f0", print: false)
-    files = f.find_parallel
+    files = f.find
     files.sort!
     expected = Generator.files.select { |n| /f0/.match(n) }
     files.should eq(expected)

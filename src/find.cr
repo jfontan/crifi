@@ -24,24 +24,36 @@ module ParallelFind
       @print = print
     end
 
-    def find
+    def find(jobs : Int = 0)
+      nprocs = System.cpu_count
+      return find_sequential if jobs == 1 || nprocs < 4
+      find_parallel(jobs)
+    end
+
+    def find_sequential : Array(String)
+      files = Array(String).new
       @paths.push @path
 
       loop do
         break if @paths.size == 0
 
         p = @paths.pop
-        dirs = process(p, @re)
-        dirs.each { |d| @paths.push(d) }
+        r = process(p, @re)
+        next if !r
+        @paths.concat(r.dirs)
+        files.concat(r.files) if @list && r.files
       end
+
+      files
     end
 
-    def find_parallel : Array(String)
+    def find_parallel(jobs : Int = 0) : Array(String)
       work = Channel(String).new
       results = Channel(Result | Nil).new
       files = Array(String).new
 
       nprocs = System.cpu_count
+      nprocs = jobs if jobs > 0
 
       NestedScheduler::ThreadPool.nursery(thread_count: nprocs.to_i32) do |pool|
         (nprocs - 1).times do
