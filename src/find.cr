@@ -1,6 +1,6 @@
 require "nested_scheduler"
 
-module Crifi
+module ParallelFind
   VERSION = "0.1.0"
 
   class Find
@@ -115,6 +115,3 @@ module Crifi
     end
   end
 end
-
-f = Crifi::Find.new("/", "")
-f.find_parallel

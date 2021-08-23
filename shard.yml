@@ -1,12 +1,12 @@
-name: crifi
+name: parallel-find
 version: 0.1.0
 
 authors:
   - Javi Fontan <jfontan@gmail.com>
 
-targets:
-  crifi:
-    main: src/crifi.cr
+# targets:
+#   crifi:
+#     main: src/crifi.cr
 
 crystal: 1.1.1
 

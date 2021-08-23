@@ -1,6 +1,6 @@
 require "./spec_helper"
 
-describe Crifi do
+describe ParallelFind do
   # TODO: Write tests
 
   it "works" do
