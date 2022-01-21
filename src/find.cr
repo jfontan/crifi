@@ -1,5 +1,3 @@
-require "nested_scheduler"
-
 module ParallelFind
   VERSION = "0.1.0"
 
@@ -26,6 +24,7 @@ module ParallelFind
 
     def find(jobs : Int = 0)
       nprocs = System.cpu_count
+      jobs = nprocs - 1 if jobs == 0
       return find_sequential if jobs == 1 || nprocs < 4
       find_parallel(jobs)
     end
@@ -55,59 +54,55 @@ module ParallelFind
       nprocs = System.cpu_count
       nprocs = jobs if jobs > 0
 
-      NestedScheduler::ThreadPool.nursery(thread_count: nprocs.to_i32) do |pool|
-        (nprocs - 1).times do
-          pool.spawn do
-            while path = work.receive?
-              break if !path
-              r = process(path, @re)
-              results.send(r)
-            end
+      jobs.times do
+        spawn do
+          while path = work.receive?
+            break if !path
+            r = process(path, @re)
+            results.send(r)
           end
         end
-
-        pool.spawn do
-          path = @path
-          value = true
-          active = 0
-          loop do
-            if value
-              select
-              when work.send(path)
-                active += 1
-                if @paths.size > 0
-                  path = @paths.pop
-                  value = true
-                else
-                  value = false
-                end
-              when r = results.receive
-                active -= 1
-                if r
-                  @paths.concat(r.dirs) if r.dirs
-                  files.concat(r.files) if r.files
-                end
-              end
-            else
-              break if active <= 0
-
-              r = results.receive
-              active -= 1
-              if r
-                @paths.concat(r.dirs) if r.dirs
-                files.concat(r.files) if r.files
-              end
-
-              if @paths.size > 0
-                path = @paths.pop
-                value = true
-              end
-            end
-          end
-          work.close
-        end
-        files
       end
+
+      path = @path
+      value = true
+      active = 0
+      loop do
+        if value
+          select
+          when work.send(path)
+            active += 1
+            if @paths.size > 0
+              path = @paths.pop
+              value = true
+            else
+              value = false
+            end
+          when r = results.receive
+            active -= 1
+            if r
+              @paths.concat(r.dirs) if r.dirs
+              files.concat(r.files) if r.files
+            end
+          end
+        else
+          break if active <= 0
+
+          r = results.receive
+          active -= 1
+          if r
+            @paths.concat(r.dirs) if r.dirs
+            files.concat(r.files) if r.files
+          end
+
+          if @paths.size > 0
+            path = @paths.pop
+            value = true
+          end
+        end
+      end
+      work.close
+      files
     end
 
     def process(path : String, re : Regex) : Result | Nil
